@@ -1,29 +1,34 @@
+const apiKey = '9b8ee1ceace92b1727eafef8733c9a30';
+const searchEl = document.getElementById('search-button');
+const clearHistoryEl = document.getElementById('clear-history-button');
+let inputEl = document.getElementById('city-input');
+const historyEl = document.getElementById('history');
+let searchHistory = JSON.parse(localStorage.getItem('search')) || [];
+let iconEl = document.getElementById('icon');
+let tempEl = document.getElementById('temperature');
+let humidityEl = document.getElementById('humidity');
+let windEl = document.getElementById('wind');
+let uvEl = document.getElementById('uv');
+let cityNameEl = document.getElementById('city-name');
+
 function initPage() {
-    let apiKey = '9b8ee1ceace92b1727eafef8733c9a30';
-    let searchEl = document.getElementById('search-button');
-    let inputEl = document.getElementById('city-input');
-    let historyEl = document.getElementById('history');
-    let searchHistory = JSON.parse(localStorage.getItem('search')) || [];
-    let iconEl = document.getElementById('icon');
-    let tempEl = document.getElementById('temperature');
-    let humidityEl = document.getElementById('humidity');
-    let windEl = document.getElementById('wind');
-    let uvEl = document.getElementById('uv');
-    let cityNameEl = document.getElementById('city-name');
     console.log(searchHistory);
 
+    // addEventListeners();
 
     searchEl.addEventListener('click',() => {
         let searchTerm = inputEl.value;
         getWeather(searchTerm);
         searchHistory.push(searchTerm);
-        localStorage.setItem('search',JSON.stringify(searchHistory));
+        localStorage.setItem('search',JSON.stringify([searchHistory]));
         renderSearchHistory();
     });
 
+    clearHistory();
+
     function renderSearchHistory() {
         historyEl.innerHTML = '';
-        for (let i=0; i<searchHistory.length; i++) {
+        for (let i=0; i < searchHistory.length; i++) {
             let historyItem = document.createElement('input');
             historyItem.setAttribute('type','text');
             historyItem.setAttribute('readonly',true);
@@ -37,20 +42,20 @@ function initPage() {
     }
 
     renderSearchHistory();
-        if (searchHistory.length > 0) {
-            getWeather(searchHistory[searchHistory.length - 1]);
-        }
+
+    //what is the desired effect of this if statement??
+    if (searchHistory.length > 0) {
+        getWeather(searchHistory[searchHistory.length - 1]);
+    }
 
     function getWeather(cityName) {
         //  Using saved city name, execute a current condition get request from open weather map api
         let queryURL = 'https://api.openweathermap.org/data/2.5/weather?q=' + cityName + '&appid=' + apiKey;
         axios.get(queryURL)
         .then((response) => {
-            // console.log(response);
-//  Parse response to display current conditions
-        //  Method for using 'date' objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
+            //  Parse response to display current conditions
+            //  Method for using 'date' objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
             let currentDate = new Date(response.data.dt*1000);
-            // console.log(currentDate);
             let day = currentDate.getDate();
             let month = currentDate.getMonth() + 1;
             let year = currentDate.getFullYear();
@@ -109,4 +114,11 @@ function initPage() {
         return Math.floor((K - 273.15) *1.8 +32);
     }    
 };
-initPage();            
+
+function clearHistory() {
+    clearHistoryEl.addEventListener('click', () => {
+        localStorage.setItem('search',JSON.stringify([]));
+    });
+};
+
+initPage();
