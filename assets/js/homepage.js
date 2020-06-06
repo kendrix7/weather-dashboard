@@ -13,7 +13,7 @@ function initPage() {
     console.log(searchHistory);
 
 
-    searchEl.addEventListener('click',function() {
+    searchEl.addEventListener('click',() => {
         let searchTerm = inputEl.value;
         getWeather(searchTerm);
         searchHistory.push(searchTerm);
@@ -29,7 +29,7 @@ function initPage() {
             historyItem.setAttribute('readonly',true);
             historyItem.setAttribute('class', 'form-control d-block bg-white');
             historyItem.setAttribute('value', searchHistory[i]);
-            historyItem.addEventListener('click',function() {
+            historyItem.addEventListener('click',() => {
                 getWeather(this.value);
             })
             historyEl.append(historyItem);
@@ -45,7 +45,7 @@ function initPage() {
         //  Using saved city name, execute a current condition get request from open weather map api
         let queryURL = 'https://api.openweathermap.org/data/2.5/weather?q=' + cityName + '&appid=' + apiKey;
         axios.get(queryURL)
-        .then(function(response){
+        .then((response) => {
             // console.log(response);
 //  Parse response to display current conditions
         //  Method for using 'date' objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
@@ -65,7 +65,7 @@ function initPage() {
         let lon = response.data.coord.lon;
         let UVQueryURL = 'https://api.openweathermap.org/data/2.5/uvi/forecast?lat=' + lat + '&lon=' + lon + '&appid=' + apiKey + '&cnt=1';
         axios.get(UVQueryURL)
-        .then(function(response){
+        .then((response) => {
             let UVIndex = document.createElement('span');
             UVIndex.setAttribute('class','badge badge-danger');
             UVIndex.innerHTML = response.data[0].value;
@@ -76,7 +76,7 @@ function initPage() {
         let cityID = response.data.id;
         let forecastQueryURL = 'https://api.openweathermap.org/data/2.5/forecast?id=' + cityID + '&appid=' + apiKey;
         axios.get(forecastQueryURL)
-        .then(function(response){
+        .then((response) => {
 //  Parse response to display forecast for next 5 days underneath current conditions
             // console.log(response);
             let forecastEls = document.querySelectorAll('.forecast');
