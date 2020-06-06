@@ -1,8 +1,7 @@
 const apiKey = '9b8ee1ceace92b1727eafef8733c9a30';
 const searchEl = document.getElementById('search-button');
 const clearHistoryEl = document.getElementById('clear-history-button');
-const inputEl = document.getElementById('city-input');
-const historyEl = document.getElementById('history');
+const searchHistoryEl = document.getElementById('search-history');
 const searchHistory = JSON.parse(localStorage.getItem('search')) || [];
 const iconEl = document.getElementById('icon');
 const tempEl = document.getElementById('temperature');
@@ -10,13 +9,22 @@ const humidityEl = document.getElementById('humidity');
 const windEl = document.getElementById('wind');
 const uvEl = document.getElementById('uv');
 const cityNameEl = document.getElementById('city-name');
+const openWeathermapURL = 'https://api.openweathermap.org/';
+let searchInputEl = document.getElementById('city-input');
+
+// GOAL DESIGN
+// function initPageFoReal() {
+//     addEventListeners();
+//     initialRender(); //getWeather from what is in sessionStorage
+// }
 
 function initPage() {
     console.log(searchHistory);
 
     searchEl.addEventListener('click',() => {
-        let searchTerm = inputEl.value;
+        let searchTerm = searchInputEl.value;
         getWeather(searchTerm);
+        populateSessionStorageWithCityData(searchInputEl.value);
         searchHistory.push(searchTerm);
         localStorage.setItem('search',JSON.stringify([searchHistory]));
         renderSearchHistory();
@@ -25,7 +33,7 @@ function initPage() {
     clearHistory();
 
     function renderSearchHistory() {
-        historyEl.innerHTML = '';
+        searchHistoryEl.innerHTML = '';
         for (let i=0; i < searchHistory.length; i++) {
             let historyItem = document.createElement('input');
             historyItem.setAttribute('type','text');
@@ -35,7 +43,7 @@ function initPage() {
             historyItem.addEventListener('click',() => {
                 getWeather(this.value);
             })
-            historyEl.append(historyItem);
+            searchHistoryEl.append(historyItem);
         }
     }
 
@@ -51,6 +59,7 @@ function initPage() {
         let queryURL = 'https://api.openweathermap.org/data/2.5/weather?q=' + cityName + '&appid=' + apiKey;
         axios.get(queryURL)
         .then((response) => {
+            console.log("*** Response from API ***\n", response);
             //  Parse response to display current conditions
             //  Method for using 'date' objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
             let currentDate = new Date(response.data.dt*1000);
@@ -116,8 +125,78 @@ function kelivnToFahrenheit(temperatureInKelvin) {
 
 function clearHistory() {
     clearHistoryEl.addEventListener('click', () => {
-        localStorage.setItem('search',JSON.stringify([]));
+        localStorage.clear();
+        sessionStorage.clear();
     });
 };
+
+async function getCityWeatherData(city) {
+    try {
+        let weatherObj = await axios.get(openWeathermapURL + 'data/2.5/weather?q=' + city + '&appid=' + apiKey);
+        return weatherObj;
+    }catch(error) {
+        console.error("!!! Error in getCityWeatherData !!!", error.message);
+    }
+}
+
+// Be sure to JSON.parse the cityDta if it is coming from sessionStorage
+async function getCityUVIndex(cityData) {
+    try {
+        let requestURL = openWeathermapURL + 'data/2.5/uvi/forecast?lat=' + cityData.data.coord.lat + '&lon=' + cityData.data.coord.lon + '&appid=' + apiKey + '&cnt=1';
+        let cityUVIndex = await axios.get(requestURL);
+        return cityUVIndex;
+    } catch(error) {
+        console.error("!!! Error in getCityUVIndex !!!", error.message);
+    }
+}
+
+async function getCityForecast(cityData) {
+    try {
+        let requestURL = openWeathermapURL + 'data/2.5/forecast?id=' + cityData.data.id + '&appid=' + apiKey;
+        let cityForecast = await axios.get(requestURL);
+        return cityForecast;
+    }catch(error) {
+        console.error("!!! Error in getCityForecast !!!", error.message);
+    }
+}
+
+async function populateSessionStorageWithCityData(cityName) {
+    try {
+        let cityWeatherData = await getCityWeatherData(cityName);
+        let cityUVIndex = await getCityUVIndex(cityWeatherData);
+        let cityForecast = await getCityForecast(cityWeatherData);
+        let combinedCityWeatherData = {
+            cityWeatherData: cityWeatherData.data,
+            cityUVIndex: cityUVIndex.data,
+            cityForecast: cityForecast.data
+        };
+        sessionStorage.setItem(combinedCityWeatherData.cityWeatherData.name, JSON.stringify(combinedCityWeatherData));
+    }catch(error) {
+        console.error("!!! Error in populateSessionStorageWithCityData !!!", error.message);
+    }
+}
+
+async function renderSearchHistory2() {
+    searchHistoryEl.innerHTML = '';
+
+
+}
+
+// function renderSearchHistory() {
+//     searchHistoryEl.innerHTML = '';
+//     for (let i=0; i < searchHistory.length; i++) {
+//         let historyItem = document.createElement('input');
+//         historyItem.setAttribute('type','text');
+//         historyItem.setAttribute('readonly',true);
+//         historyItem.setAttribute('class', 'form-control d-block bg-white');
+//         historyItem.setAttribute('value', searchHistory[i]);
+//         historyItem.addEventListener('click',() => {
+//             getWeather(this.value);
+//         })
+//         searchHistoryEl.append(historyItem);
+//     }
+// }
+
+// TODO make a DisplaySelectedCity function
 
 initPage();
