@@ -1,20 +1,18 @@
 const apiKey = '9b8ee1ceace92b1727eafef8733c9a30';
 const searchEl = document.getElementById('search-button');
 const clearHistoryEl = document.getElementById('clear-history-button');
-let inputEl = document.getElementById('city-input');
+const inputEl = document.getElementById('city-input');
 const historyEl = document.getElementById('history');
-let searchHistory = JSON.parse(localStorage.getItem('search')) || [];
-let iconEl = document.getElementById('icon');
-let tempEl = document.getElementById('temperature');
-let humidityEl = document.getElementById('humidity');
-let windEl = document.getElementById('wind');
-let uvEl = document.getElementById('uv');
-let cityNameEl = document.getElementById('city-name');
+const searchHistory = JSON.parse(localStorage.getItem('search')) || [];
+const iconEl = document.getElementById('icon');
+const tempEl = document.getElementById('temperature');
+const humidityEl = document.getElementById('humidity');
+const windEl = document.getElementById('wind');
+const uvEl = document.getElementById('uv');
+const cityNameEl = document.getElementById('city-name');
 
 function initPage() {
     console.log(searchHistory);
-
-    // addEventListeners();
 
     searchEl.addEventListener('click',() => {
         let searchTerm = inputEl.value;
@@ -63,7 +61,7 @@ function initPage() {
             let weatherPic = response.data.weather[0].icon;
             iconEl.setAttribute('src','https://openweathermap.org/img/wn/' + weatherPic + '@2x.png');
             iconEl.setAttribute('alt',response.data.weather[0].description);
-            tempEl.innerHTML = 'Temperature: ' + k2f(response.data.main.temp) + ' &#176F';
+            tempEl.innerHTML = 'Temperature: ' + kelivnToFahrenheit(response.data.main.temp) + ' &#176F';
             humidityEl.innerHTML = 'Humidity: ' + response.data.main.humidity + '%';
             windEl.innerHTML = 'Wind Speed: ' + response.data.wind.speed + ' MPH';
         let lat = response.data.coord.lat;
@@ -101,7 +99,7 @@ function initPage() {
                 forecastWeatherEl.setAttribute('alt',response.data.list[forecastIndex].weather[0].description);
                 forecastEls[i].append(forecastWeatherEl);
                 let forecastTempEl = document.createElement('p');
-                forecastTempEl.innerHTML = 'Temp: ' + k2f(response.data.list[forecastIndex].main.temp) + ' &#176F';
+                forecastTempEl.innerHTML = 'Temp: ' + kelivnToFahrenheit(response.data.list[forecastIndex].main.temp) + ' &#176F';
                 forecastEls[i].append(forecastTempEl);
                 let forecastHumidityEl = document.createElement('p');
                 forecastHumidityEl.innerHTML = 'Humidity: ' + response.data.list[forecastIndex].main.humidity + '%';
@@ -110,9 +108,10 @@ function initPage() {
             })
         });  
     }
-    function k2f(K) {
-        return Math.floor((K - 273.15) *1.8 +32);
-    }    
+};
+
+function kelivnToFahrenheit(temperatureInKelvin) {
+    return Math.floor((temperatureInKelvin - 273.15) * 1.8 + 32);
 };
 
 function clearHistory() {
