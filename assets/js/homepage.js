@@ -2,7 +2,6 @@ const apiKey = '9b8ee1ceace92b1727eafef8733c9a30';
 const searchEl = document.getElementById('search-button');
 const clearHistoryEl = document.getElementById('clear-history-button');
 const searchHistoryEl = document.getElementById('search-history');
-const searchHistory = JSON.parse(localStorage.getItem('search')) || [];
 const iconEl = document.getElementById('icon');
 const tempEl = document.getElementById('temperature');
 const humidityEl = document.getElementById('humidity');
@@ -11,6 +10,7 @@ const uvEl = document.getElementById('uv');
 const cityNameEl = document.getElementById('city-name');
 const openWeathermapURL = 'https://api.openweathermap.org/';
 let searchInputEl = document.getElementById('city-input');
+let searchHistory = getHistory();
 
 // GOAL DESIGN
 // function initPageFoReal() {
@@ -18,38 +18,27 @@ let searchInputEl = document.getElementById('city-input');
 //     initialRender(); //getWeather from what is in sessionStorage
 // }
 
-function initPage() {
+async function initPage() {
     console.log(searchHistory);
 
-    searchEl.addEventListener('click',() => {
-        let searchTerm = searchInputEl.value;
-        getWeather(searchTerm);
-        populateSessionStorageWithCityData(searchInputEl.value);
-        searchHistory.push(searchTerm);
-        localStorage.setItem('search',JSON.stringify([searchHistory]));
-        renderSearchHistory();
+    searchEl.addEventListener('click',async () => {
+        getWeather(searchInputEl.value);
+        await populateSessionStorageWithCityData(searchInputEl.value);
+        await updateSessionStorageHistory(searchInputEl.value);
+    });
+
+    searchInputEl.addEventListener('keypress',async (event) => {
+        if(event.key === "Enter") {
+            getWeather(searchInputEl.value);
+            await populateSessionStorageWithCityData(searchInputEl.value);
+            await updateSessionStorageHistory(searchInputEl.value);
+        }
     });
 
     clearHistory();
 
-    function renderSearchHistory() {
-        searchHistoryEl.innerHTML = '';
-        for (let i=0; i < searchHistory.length; i++) {
-            let historyItem = document.createElement('input');
-            historyItem.setAttribute('type','text');
-            historyItem.setAttribute('readonly',true);
-            historyItem.setAttribute('class', 'form-control d-block bg-white');
-            historyItem.setAttribute('value', searchHistory[i]);
-            historyItem.addEventListener('click',() => {
-                getWeather(this.value);
-            })
-            searchHistoryEl.append(historyItem);
-        }
-    }
-
     renderSearchHistory();
 
-    //what is the desired effect of this if statement??
     if (searchHistory.length > 0) {
         getWeather(searchHistory[searchHistory.length - 1]);
     }
@@ -120,14 +109,47 @@ function initPage() {
 };
 
 function kelivnToFahrenheit(temperatureInKelvin) {
-    return Math.floor((temperatureInKelvin - 273.15) * 1.8 + 32);
+    try {
+        return Math.floor((temperatureInKelvin - 273.15) * 1.8 + 32);
+    }catch(error) {
+        console.error("!!! Error in kelivnToFahrenheit !!!", error.message);
+    }
 };
 
 function clearHistory() {
-    clearHistoryEl.addEventListener('click', () => {
-        localStorage.clear();
-        sessionStorage.clear();
-    });
+    try {
+        clearHistoryEl.addEventListener('click', () => {
+            localStorage.clear();
+            sessionStorage.clear();
+        });
+    }catch(error) {
+        console.error("!!! Error in clearHistory !!!", error.message);
+    }
+};
+
+async function getHistory() {
+    try {
+        let searchHistory = JSON.parse(sessionStorage.getItem("History")) || [];
+        return searchHistory;
+    }catch(error) {
+        console.error("!!! Error in getHistory !!!", error.message);
+    }
+};
+
+async function addCityToLocalHistory(cityName) {
+    try {
+        let searchHistory = await getHistory();
+        searchHistory.push(cityName);
+        return searchHistory;
+    }catch(error) {
+        console.error("!!! Error in addCityToLocalHistory !!!", error.message);
+    }
+};
+
+async function updateSessionStorageHistory(cityName) {
+    let searchHistory = await addCityToLocalHistory(cityName);
+    sessionStorage.setItem("History", JSON.stringify(searchHistory));
+    renderSearchHistory();
 };
 
 async function getCityWeatherData(city) {
@@ -137,9 +159,8 @@ async function getCityWeatherData(city) {
     }catch(error) {
         console.error("!!! Error in getCityWeatherData !!!", error.message);
     }
-}
+};
 
-// Be sure to JSON.parse the cityDta if it is coming from sessionStorage
 async function getCityUVIndex(cityData) {
     try {
         let requestURL = openWeathermapURL + 'data/2.5/uvi/forecast?lat=' + cityData.data.coord.lat + '&lon=' + cityData.data.coord.lon + '&appid=' + apiKey + '&cnt=1';
@@ -148,7 +169,7 @@ async function getCityUVIndex(cityData) {
     } catch(error) {
         console.error("!!! Error in getCityUVIndex !!!", error.message);
     }
-}
+};
 
 async function getCityForecast(cityData) {
     try {
@@ -158,7 +179,7 @@ async function getCityForecast(cityData) {
     }catch(error) {
         console.error("!!! Error in getCityForecast !!!", error.message);
     }
-}
+};
 
 async function populateSessionStorageWithCityData(cityName) {
     try {
@@ -174,28 +195,23 @@ async function populateSessionStorageWithCityData(cityName) {
     }catch(error) {
         console.error("!!! Error in populateSessionStorageWithCityData !!!", error.message);
     }
-}
+};
 
-async function renderSearchHistory2() {
+async function renderSearchHistory() {
+    let searchHistory = await getHistory();
     searchHistoryEl.innerHTML = '';
-
-
-}
-
-// function renderSearchHistory() {
-//     searchHistoryEl.innerHTML = '';
-//     for (let i=0; i < searchHistory.length; i++) {
-//         let historyItem = document.createElement('input');
-//         historyItem.setAttribute('type','text');
-//         historyItem.setAttribute('readonly',true);
-//         historyItem.setAttribute('class', 'form-control d-block bg-white');
-//         historyItem.setAttribute('value', searchHistory[i]);
-//         historyItem.addEventListener('click',() => {
-//             getWeather(this.value);
-//         })
-//         searchHistoryEl.append(historyItem);
-//     }
-// }
+    searchHistory.forEach(entry => {
+        let entryEl = document.createElement('input');
+        entryEl.setAttribute('type','text');
+        entryEl.setAttribute('readonly',true);
+        entryEl.setAttribute('class', 'form-control d-block bg-white');
+        entryEl.setAttribute('value', entry);
+        entryEl.addEventListener('click',() => {
+            getWeather(this.value);
+        })
+        searchHistoryEl.append(entryEl);
+    })
+};
 
 // TODO make a DisplaySelectedCity function
 
