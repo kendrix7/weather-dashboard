@@ -12,99 +12,23 @@ const openWeathermapURL = 'https://api.openweathermap.org/';
 let searchInputEl = document.getElementById('city-input');
 let searchHistory = getHistory();
 
-// GOAL DESIGN
-// function initPageFoReal() {
-//     addEventListeners();
-//     initialRender(); //getWeather from what is in sessionStorage
-// }
-
 async function initPage() {
-    console.log(searchHistory);
-
     searchEl.addEventListener('click',async () => {
-        getWeather(searchInputEl.value);
         await populateSessionStorageWithCityData(searchInputEl.value);
         await updateSessionStorageHistory(searchInputEl.value);
+        await displaySelectedCity(searchInputEl.value);
     });
-
     searchInputEl.addEventListener('keypress',async (event) => {
         if(event.key === "Enter") {
-            getWeather(searchInputEl.value);
             await populateSessionStorageWithCityData(searchInputEl.value);
             await updateSessionStorageHistory(searchInputEl.value);
+            await displaySelectedCity(searchInputEl.value);
         }
     });
-
     clearHistory();
-
     renderSearchHistory();
-
     if (searchHistory.length > 0) {
         getWeather(searchHistory[searchHistory.length - 1]);
-    }
-
-    function getWeather(cityName) {
-        //  Using saved city name, execute a current condition get request from open weather map api
-        let queryURL = 'https://api.openweathermap.org/data/2.5/weather?q=' + cityName + '&appid=' + apiKey;
-        axios.get(queryURL)
-        .then((response) => {
-            console.log("*** Response from API ***\n", response);
-            //  Parse response to display current conditions
-            //  Method for using 'date' objects obtained from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date
-            let currentDate = new Date(response.data.dt*1000);
-            let day = currentDate.getDate();
-            let month = currentDate.getMonth() + 1;
-            let year = currentDate.getFullYear();
-            cityNameEl.innerHTML = response.data.name + ' (' + month + '/' + day + '/' + year + ') ';
-            let weatherPic = response.data.weather[0].icon;
-            iconEl.setAttribute('src','https://openweathermap.org/img/wn/' + weatherPic + '@2x.png');
-            iconEl.setAttribute('alt',response.data.weather[0].description);
-            tempEl.innerHTML = 'Temperature: ' + kelivnToFahrenheit(response.data.main.temp) + ' &#176F';
-            humidityEl.innerHTML = 'Humidity: ' + response.data.main.humidity + '%';
-            windEl.innerHTML = 'Wind Speed: ' + response.data.wind.speed + ' MPH';
-        let lat = response.data.coord.lat;
-        let lon = response.data.coord.lon;
-        let UVQueryURL = 'https://api.openweathermap.org/data/2.5/uvi/forecast?lat=' + lat + '&lon=' + lon + '&appid=' + apiKey + '&cnt=1';
-        axios.get(UVQueryURL)
-        .then((response) => {
-            let UVIndex = document.createElement('span');
-            UVIndex.setAttribute('class','badge badge-danger');
-            UVIndex.innerHTML = response.data[0].value;
-            uvEl.innerHTML = 'UV Index: ';
-            uvEl.append(UVIndex);
-        });
-//  Using saved city name, execute a 5-day forecast get request from open weather map api
-        let cityID = response.data.id;
-        let forecastQueryURL = 'https://api.openweathermap.org/data/2.5/forecast?id=' + cityID + '&appid=' + apiKey;
-        axios.get(forecastQueryURL)
-        .then((response) => {
-//  Parse response to display forecast for next 5 days underneath current conditions
-            // console.log(response);
-            let forecastEls = document.querySelectorAll('.forecast');
-            for (i=0; i<forecastEls.length; i++) {
-                forecastEls[i].innerHTML = '';
-                let forecastIndex = i*8 + 4;
-                let forecastDate = new Date(response.data.list[forecastIndex].dt * 1000);
-                let forecastDay = forecastDate.getDate();
-                let forecastMonth = forecastDate.getMonth() + 1;
-                let forecastYear = forecastDate.getFullYear();
-                let forecastDateEl = document.createElement('p');
-                forecastDateEl.setAttribute('class','mt-3 mb-0 forecast-date');
-                forecastDateEl.innerHTML = forecastMonth + '/' + forecastDay + '/' + forecastYear;
-                forecastEls[i].append(forecastDateEl);
-                let forecastWeatherEl = document.createElement('img');
-                forecastWeatherEl.setAttribute('src','https://openweathermap.org/img/wn/' + response.data.list[forecastIndex].weather[0].icon + '@2x.png');
-                forecastWeatherEl.setAttribute('alt',response.data.list[forecastIndex].weather[0].description);
-                forecastEls[i].append(forecastWeatherEl);
-                let forecastTempEl = document.createElement('p');
-                forecastTempEl.innerHTML = 'Temp: ' + kelivnToFahrenheit(response.data.list[forecastIndex].main.temp) + ' &#176F';
-                forecastEls[i].append(forecastTempEl);
-                let forecastHumidityEl = document.createElement('p');
-                forecastHumidityEl.innerHTML = 'Humidity: ' + response.data.list[forecastIndex].main.humidity + '%';
-                forecastEls[i].append(forecastHumidityEl);
-                }
-            })
-        });  
     }
 };
 
@@ -121,6 +45,7 @@ function clearHistory() {
         clearHistoryEl.addEventListener('click', () => {
             localStorage.clear();
             sessionStorage.clear();
+            renderSearchHistory();
         });
     }catch(error) {
         console.error("!!! Error in clearHistory !!!", error.message);
@@ -135,6 +60,16 @@ async function getHistory() {
         console.error("!!! Error in getHistory !!!", error.message);
     }
 };
+
+async function getCityFromSessionStorage(cityName) {
+    try {
+        if (!cityName) throw new Error(`${cityName} is not a fucking city!`);
+        let city = JSON.parse(sessionStorage.getItem(cityName));
+        return city;
+    }catch(error) {
+        console.error("!!! Error in getCityFromSessionStorage !!!", error.message);
+    }
+}
 
 async function addCityToLocalHistory(cityName) {
     try {
@@ -187,11 +122,11 @@ async function populateSessionStorageWithCityData(cityName) {
         let cityUVIndex = await getCityUVIndex(cityWeatherData);
         let cityForecast = await getCityForecast(cityWeatherData);
         let combinedCityWeatherData = {
-            cityWeatherData: cityWeatherData.data,
-            cityUVIndex: cityUVIndex.data,
-            cityForecast: cityForecast.data
+            weather: cityWeatherData.data,
+            uvindex: cityUVIndex.data,
+            forecast: cityForecast.data
         };
-        sessionStorage.setItem(combinedCityWeatherData.cityWeatherData.name, JSON.stringify(combinedCityWeatherData));
+        sessionStorage.setItem(combinedCityWeatherData.weather.name, JSON.stringify(combinedCityWeatherData));
     }catch(error) {
         console.error("!!! Error in populateSessionStorageWithCityData !!!", error.message);
     }
@@ -207,12 +142,71 @@ async function renderSearchHistory() {
         entryEl.setAttribute('class', 'form-control d-block bg-white');
         entryEl.setAttribute('value', entry);
         entryEl.addEventListener('click',() => {
-            getWeather(this.value);
+            displaySelectedCity(entry);
         })
         searchHistoryEl.append(entryEl);
     })
 };
 
-// TODO make a DisplaySelectedCity function
+async function displaySelectedCity(cityName) {
+    console.log("Proudly displaying the weather for: ", cityName);
+    renderWeatherData(cityName);
+    renderForecast(cityName);
+};
+
+async function renderWeatherData(cityName) {
+    try {
+        let city = await getCityFromSessionStorage(cityName);
+        let currentDate = new Date(city.weather.dt*1000);
+        let day = currentDate.getDate();
+        let month = currentDate.getMonth() + 1;
+        let year = currentDate.getFullYear();
+        let weatherPic = city.weather.weather[0].icon;
+        let UVIndex = document.createElement('span');
+    
+        cityNameEl.innerHTML = city.weather.name + ' (' + month + '/' + day + '/' + year + ') ';
+        iconEl.setAttribute('src','https://openweathermap.org/img/wn/' + weatherPic + '@2x.png');
+        iconEl.setAttribute('alt', city.weather.weather[0].description);
+        tempEl.innerHTML = 'Temperature: ' + kelivnToFahrenheit(city.weather.main.temp) + ' &#176F';
+        humidityEl.innerHTML = 'Humidity: ' + city.weather.main.humidity + '%';
+        windEl.innerHTML = 'Wind Speed: ' + city.weather.wind.speed + ' MPH';
+        UVIndex.setAttribute('class','badge badge-danger');
+        UVIndex.innerHTML = city.uvindex[0].value;
+        uvEl.innerHTML = 'UV Index: ';
+        uvEl.append(UVIndex);
+    } catch(error) {
+        console.error("!!! Error in renderWeatherData !!!", error.message);
+    }
+}
+
+async function renderForecast(cityName) {
+    try {
+        let city = await getCityFromSessionStorage(cityName);
+        let forecastEls = document.querySelectorAll('.forecast');
+        
+        for (let i = 0; i < forecastEls.length; i++) {
+            let forecastDateEl = document.createElement('p');
+            let forecastWeatherEl = document.createElement('img');
+            let forecastTempEl = document.createElement('p');
+            let forecastHumidityEl = document.createElement('p');
+            
+            forecastEls[i].innerHTML = '';
+
+            forecastDateEl.setAttribute('class','mt-3 mb-0 forecast-date');
+            forecastDateEl.innerHTML = city.forecast.list[i].dt_txt;
+    
+            forecastWeatherEl.setAttribute('src','https://openweathermap.org/img/wn/' + city.forecast.list[i].weather[0].icon + '@2x.png');
+            forecastWeatherEl.setAttribute('alt', city.forecast.list[i].weather[0].description);
+    
+            forecastTempEl.innerHTML = 'Temp: ' + kelivnToFahrenheit(city.forecast.list[i].main.temp) + ' &#176F';
+    
+            forecastHumidityEl.innerHTML = 'Humidity: ' + city.forecast.list[i].main.humidity + '%';
+    
+            forecastEls[i].append(forecastDateEl, forecastWeatherEl, forecastTempEl, forecastHumidityEl);
+        }
+    } catch(error) {
+        console.error("!!! Error in renderForecast !!!", error.message);
+    }
+};
 
 initPage();
